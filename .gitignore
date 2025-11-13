@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Arquivo de configuração local (não versionar)
+src/main/resources/application-local.properties
