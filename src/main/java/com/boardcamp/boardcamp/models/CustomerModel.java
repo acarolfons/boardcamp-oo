@@ -19,7 +19,7 @@ public class CustomerModel {
     @Column(nullable = false, length = 11, unique = true)
     private String cpf;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 11)
     private String phone;
 }
 
