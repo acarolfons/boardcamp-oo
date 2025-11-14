@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/games")
@@ -22,18 +21,12 @@ public class GameController {
 
     @GetMapping
     public ResponseEntity<List<GameModel>> getAllGames() {
-        List<GameModel> games = gameService.getAllGames();
-        return ResponseEntity.status(HttpStatus.OK).body(games);
+        return ResponseEntity.ok(gameService.getAllGames());
     }
 
     @PostMapping
-    public ResponseEntity<Object> createGame(@RequestBody GameDTO gameDTO) {
-        Optional<GameModel> game = gameService.createGame(gameDTO);
-
-        if (!game.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid game data or game already exists");
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(game.get());
+    public ResponseEntity<GameModel> createGame(@RequestBody GameDTO gameDTO) {
+        GameModel created = gameService.createGame(gameDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }

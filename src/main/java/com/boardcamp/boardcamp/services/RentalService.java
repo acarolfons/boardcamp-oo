@@ -1,6 +1,9 @@
 package com.boardcamp.boardcamp.services;
 
 import com.boardcamp.boardcamp.dtos.RentalDTO;
+import com.boardcamp.boardcamp.exceptions.BadRequestException;
+import com.boardcamp.boardcamp.exceptions.NotFoundException;
+import com.boardcamp.boardcamp.exceptions.UnprocessableEntityException;
 import com.boardcamp.boardcamp.models.RentalModel;
 import com.boardcamp.boardcamp.models.GameModel;
 import com.boardcamp.boardcamp.models.CustomerModel;
@@ -12,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class RentalService {
@@ -33,20 +35,17 @@ public class RentalService {
     }
 
     // POST "/rentals"
-    public Optional<RentalModel> createRental(RentalDTO rentalDTO) {
-        if (rentalDTO.getDaysRented() == null || rentalDTO.getDaysRented() <= 0) return Optional.empty();
-        if (rentalDTO.getCustomerId() == null || rentalDTO.getGameId() == null) return Optional.empty();
+    public RentalModel createRental(RentalDTO rentalDTO) {
+        if (rentalDTO.getDaysRented() == null || rentalDTO.getDaysRented() <= 0) throw new BadRequestException("Days rented must be > 0");
+        if (rentalDTO.getCustomerId() == null || rentalDTO.getGameId() == null) throw new BadRequestException("CustomerId and GameId are required");
 
-        Optional<CustomerModel> customerOpt = customerRepository.findById(rentalDTO.getCustomerId());
-        Optional<GameModel> gameOpt = gameRepository.findById(rentalDTO.getGameId());
+        CustomerModel customer = customerRepository.findById(rentalDTO.getCustomerId())
+            .orElseThrow(() -> new NotFoundException("Customer not found"));
+        GameModel game = gameRepository.findById(rentalDTO.getGameId())
+            .orElseThrow(() -> new NotFoundException("Game not found"));
 
-        if (customerOpt.isEmpty() || gameOpt.isEmpty()) return Optional.empty();
-
-        CustomerModel customer = customerOpt.get();
-        GameModel game = gameOpt.get();
-
-        List<RentalModel> rentedGames = rentalRepository.findByGameIdAndReturnDateIsNull(game.getId());
-        if (rentedGames.size() >= game.getStockTotal()) return Optional.empty();
+        int rentalsOpen = rentalRepository.findByGameIdAndReturnDateIsNull(game.getId()).size();    
+        if (rentalsOpen >= game.getStockTotal()) throw new UnprocessableEntityException("No games available");
 
         RentalModel rental = new RentalModel();
         rental.setCustomer(customer);
@@ -57,38 +56,36 @@ public class RentalService {
         rental.setReturnDate(null);
         rental.setDelayFee(0);
 
-        rentalRepository.save(rental);
-        return Optional.of(rental);
+        return rentalRepository.save(rental);
     }
 
     // POST "/rentals/:id/return"
-    public Optional<RentalModel> returnRental(Long rentalId) {
-        Optional<RentalModel> rentalOpt = rentalRepository.findById(rentalId);
-        if (rentalOpt.isEmpty()) return Optional.empty();
-
-        RentalModel rental = rentalOpt.get();
-        if (rental.getReturnDate() != null) return Optional.empty();
+    public RentalModel returnRental(Long rentalId) {
+        RentalModel rental = rentalRepository.findById(rentalId)
+                .orElseThrow(() -> new NotFoundException("Rental not found"));
+        if (rental.getReturnDate() != null) throw new UnprocessableEntityException("Rental already finished");
 
         rental.setReturnDate(LocalDate.now());
         long daysLate = ChronoUnit.DAYS.between(
                 rental.getRentDate().plusDays(rental.getDaysRented()),
                 rental.getReturnDate()
         );
-        rental.setDelayFee(daysLate > 0 ? (int) (daysLate * rental.getGame().getPricePerDay()) : 0);
 
-        rentalRepository.save(rental);
-        return Optional.of(rental);
+        if (daysLate > 0) {
+            rental.setDelayFee((int) (daysLate * rental.getGame().getPricePerDay()));
+        } else {
+            rental.setDelayFee(0);
+        }
+
+        return rentalRepository.save(rental);
     }
 
     // DELETE "/rentals/:id"
-    public boolean deleteRental(Long rentalId) {
-        Optional<RentalModel> rentalOpt = rentalRepository.findById(rentalId);
-        if (rentalOpt.isEmpty()) return false;
-
-        RentalModel rental = rentalOpt.get();
-        if (rental.getReturnDate() == null) return false;
+    public void deleteRental(Long rentalId) {
+        RentalModel rental = rentalRepository.findById(rentalId)
+            .orElseThrow(() -> new NotFoundException("Rental not found"));
+        if (rental.getReturnDate() == null) throw new BadRequestException("Rental not finished yet");
 
         rentalRepository.delete(rental);
-        return true;
     }
 }

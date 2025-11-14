@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/customers")
@@ -22,29 +21,17 @@ public class CustomerController {
 
     @GetMapping
     public ResponseEntity<List<CustomerModel>> getAllCustomers() {
-        List<CustomerModel> customers = customerService.getAllCustomers();
-        return ResponseEntity.status(HttpStatus.OK).body(customers);
+        return ResponseEntity.ok(customerService.getAllCustomers());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Object> getCustomerById(@PathVariable Long id) {
-        Optional<CustomerModel> customer = customerService.getCustomerById(id);
-
-        if (!customer.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Customer not found");
-        }
-
-        return ResponseEntity.status(HttpStatus.OK).body(customer.get());
+    public ResponseEntity<CustomerModel> getCustomerById(@PathVariable Long id) {
+        return ResponseEntity.ok(customerService.getCustomerById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Object> createCustomer(@RequestBody CustomerDTO customerDTO) {
-        Optional<CustomerModel> customer = customerService.createCustomer(customerDTO);
-
-        if (!customer.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid customer data or CPF already exists");
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(customer.get());
+    public ResponseEntity<CustomerModel> createCustomer(@RequestBody CustomerDTO customerDTO) {
+        CustomerModel created = customerService.createCustomer(customerDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }

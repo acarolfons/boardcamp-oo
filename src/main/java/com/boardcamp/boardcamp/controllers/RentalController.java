@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/rentals")
@@ -22,42 +21,24 @@ public class RentalController {
 
     @GetMapping
     public ResponseEntity<List<RentalModel>> getAllRentals() {
-        return ResponseEntity.status(HttpStatus.OK).body(rentalService.getAllRentals());
+        return ResponseEntity.ok(rentalService.getAllRentals());
     }
 
     @PostMapping
-    public ResponseEntity<Object> createRental(@RequestBody RentalDTO rentalDTO) {
-        Optional<RentalModel> rental = rentalService.createRental(rentalDTO);
-
-        if (!rental.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid rental data or game unavailable");
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(rental.get());
+    public ResponseEntity<RentalModel> createRental(@RequestBody RentalDTO rentalDTO) {
+        RentalModel created = rentalService.createRental(rentalDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PostMapping("/{id}/return")
-    public ResponseEntity<Object> returnRental(@PathVariable Long id) {
-        Optional<RentalModel> rental = rentalService.returnRental(id);
-
-        if (!rental.isPresent()) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body("Rental not found or already returned");
-        }
-
-        return ResponseEntity.status(HttpStatus.OK).body(rental.get());
+    public ResponseEntity<RentalModel> returnRental(@PathVariable Long id) {
+        RentalModel rental = rentalService.returnRental(id);
+        return ResponseEntity.ok(rental);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteRental(@PathVariable Long id) {
-        boolean deleted = rentalService.deleteRental(id);
-
-        if (!deleted) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Cannot delete an active rental or rental not found");
-        }
-
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    public ResponseEntity<Void> deleteRental(@PathVariable Long id) {
+        rentalService.deleteRental(id);
+        return ResponseEntity.noContent().build();
     }
 }
